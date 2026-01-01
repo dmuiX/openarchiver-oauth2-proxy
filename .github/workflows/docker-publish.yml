@@ -3,8 +3,6 @@ name: Build and Publish Custom Proxy
 on:
   push:
     branches: [ "main" ]
-    paths:
-      - 'openarchiver-oauth2-proxy/**'
   workflow_dispatch:
 
 env:
@@ -24,8 +22,8 @@ jobs:
       - name: Build and Export to Docker
         uses: docker/build-push-action@v5
         with:
-          context: ./openarchiver-oauth2-proxy
-          file: ./openarchiver-oauth2-proxy/Dockerfile
+          context: ./
+          file: ./Dockerfile
           load: true
           tags: test-proxy:latest
 

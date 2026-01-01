@@ -1,0 +1,59 @@
+name: Test Full Stack
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test-stack:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create Dummy Env File
+        run: |
+          cat <<EOF > openarchiver.env
+          # Core Config
+          STORAGE_LOCAL_ROOT_PATH=/tmp/openarchiver-data
+          POSTGRES_DB=openarchiver
+          POSTGRES_USER=admin
+          POSTGRES_PASSWORD=password
+          # Auth Mock
+          JWT_SECRET=testing_secret_key_needs_to_be_long_12345
+          OIDC_ISSUER=https://auth.example.com
+          OIDC_CLIENT_ID=mock_client_id
+          OIDC_CLIENT_SECRET=mock_client_secret
+          OIDC_REDIRECT_URI=http://localhost:4180/oauth2/callback
+          OAUTH2_PROXY_COOKIE_SECRET=OQINaROhtE9sKgZbYcprahwcW7h4qX1uWj_0W6q-WSE=
+          # Services
+          MEILI_MASTER_KEY=masterKey
+          REDIS_PASSWORD=redispass
+          # IDs
+          PUID=1000
+          PGID=100
+          EOF
+
+      - name: Start Docker Compose Stack
+        run: |
+          mkdir -p ./data_openarchiver ./data_postgres ./data_valkey ./data_meili
+          docker compose up -d --build
+
+      - name: Wait for Services to Start
+        run: sleep 30
+
+      - name: Check Container Status
+        run: docker compose ps -a
+
+      - name: Verify Proxy is Listening
+        run: |
+          # Check if the proxy port is responding (4180)
+          # We expect a 403 or redirect because we aren't authenticated, but the socket should be open.
+          curl -v --retry 5 --retry-connrefused http://localhost:4180 || exit 1
+
+      - name: Show Logs on Failure
+        if: failure()
+        run: docker compose logs
